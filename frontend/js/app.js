@@ -8,6 +8,7 @@ const elements = {
   nodes: document.querySelector("#participant-nodes"),
   stage: document.querySelector("#circle-stage"),
   centerpiece: document.querySelector("#centerpiece"),
+  wheel: document.querySelector("#roulette-wheel"),
   centerLabel: document.querySelector("#center-label"),
   centerSubtitle: document.querySelector("#center-subtitle"),
   resultLabel: document.querySelector("#result-label"),
@@ -120,6 +121,13 @@ function render() {
       `<button class="sidebar-checkpoint" type="button" data-checkpoint-id="${escapeHtml(checkpoint.id)}" title="Restore ${escapeHtml(checkpoint.name)}"><span>◷</span>${escapeHtml(checkpoint.name)}</button>`
     ).join("")
     : '<p class="empty-checkpoints">Your saved moments will appear here.</p>';
+  const wheelSlots = [...elements.wheel.querySelectorAll(".roulette-slot")];
+  const winnerIndex = state.last_result ? state.last_result.steps % wheelSlots.length : -1;
+  elements.wheel.classList.toggle("has-winner", winnerIndex >= 0);
+  elements.wheel.style.setProperty("--winner-angle", `${-Math.max(winnerIndex, 0) * 45}deg`);
+  wheelSlots.forEach((slot, index) => {
+    slot.classList.toggle("winning-slot", index === winnerIndex);
+  });
   renderResult();
   setBusy(busy);
 }
@@ -146,17 +154,41 @@ async function animateDraw(result) {
   const nodes = [...elements.nodes.querySelectorAll(".participant-node")];
   const byId = new Map(nodes.map((node) => [node.dataset.participantId, node]));
   const delay = prefersReducedMotion.matches ? 35 : Math.max(95, 250 - result.steps * 4);
+  elements.wheel.classList.remove("has-winner");
+  elements.wheel.querySelectorAll(".winning-slot").forEach((slot) => slot.classList.remove("winning-slot"));
+  const wheelTarget = -(result.steps % 8) * 45;
+  elements.wheel.style.setProperty("--winner-angle", `${wheelTarget}deg`);
   elements.stage.classList.add("is-spinning");
   elements.centerLabel.textContent = "SPINNING";
   elements.centerSubtitle.textContent = `${result.steps} RANDOM STEPS`;
-  for (const participantId of result.path) {
+  const wheelSpin = prefersReducedMotion.matches
+    ? null
+    : elements.wheel.animate(
+      [
+        { transform: "rotate(0deg)" },
+        { transform: `rotate(${360 * Math.max(4, Math.ceil(result.steps / 3)) + wheelTarget}deg)` },
+      ],
+      {
+        duration: delay * result.path.length + 300,
+        easing: "cubic-bezier(.12,.8,.18,1)",
+        fill: "forwards",
+      },
+    );
+  for (const [index, participantId] of result.path.entries()) {
     nodes.forEach((node) => node.classList.remove("current", "visited", "selected-node"));
     const node = byId.get(participantId);
     if (node) node.classList.add("current");
     await new Promise((resolve) => window.setTimeout(resolve, delay));
     if (node) node.classList.replace("current", "visited");
+    if (index === result.path.length - 1 && wheelSpin) {
+      await wheelSpin.finished;
+    }
   }
+  wheelSpin?.cancel();
   const selectedNode = byId.get(result.participant_id);
+  const winningSlot = elements.wheel.querySelectorAll(".roulette-slot")[result.steps % 8];
+  winningSlot?.classList.add("winning-slot");
+  elements.wheel.classList.add("has-winner");
   if (selectedNode) {
     selectedNode.classList.remove("visited", "current");
     selectedNode.classList.add("selected-node");
@@ -267,14 +299,26 @@ async function resetRound() {
 }
 
 document.querySelectorAll(".mode-option").forEach((button) => {
-  button.addEventListener("click", () => {
+  button.addEventListener("click", async () => {
+    if (busy || button.dataset.mode === mode) return;
     mode = button.dataset.mode;
     document.querySelectorAll(".mode-option").forEach((option) => {
       option.classList.toggle("selected", option === button);
     });
-    elements.spinHint.textContent = mode === "winner"
-      ? "One random name will win the draw."
-      : "One participant is removed with every spin.";
+    if (state?.status === "finished") {
+      try {
+        const result = await request("/api/new-round", {});
+        state = result.state;
+        render();
+        notify(`New ${mode === "eliminate" ? "elimination" : "winner"} round started.`);
+      } catch (error) {
+        notify(error.message, true);
+      }
+    } else {
+      elements.spinHint.textContent = mode === "winner"
+        ? "One random name will win the draw."
+        : "Each spin removes one participant until a champion remains.";
+    }
   });
 });
 elements.spin.addEventListener("click", spin);

@@ -17,7 +17,8 @@ from urllib.parse import urlparse
 
 
 LOGGER = logging.getLogger("circle_draw")
-ROOT = Path(__file__).resolve().parent
+BACKEND_ROOT = Path(__file__).resolve().parent
+FRONTEND_ROOT = BACKEND_ROOT.parent / "frontend"
 DEFAULT_PARTICIPANTS = (
     "Alex Morgan",
     "Jordan Lee",
@@ -298,6 +299,10 @@ class RouletteSession:
         self.history = [entry.copy() for entry in snapshot["history"]]
         self._record("Checkpoint restored", f'"{checkpoint["name"]}" was restored.')
 
+    def start_new_round(self) -> None:
+        names = [participant.name for participant in self.circle]
+        self.reset(names if len(names) >= 2 else DEFAULT_PARTICIPANTS)
+
 
 SESSION = RouletteSession()
 
@@ -306,7 +311,7 @@ class RouletteRequestHandler(SimpleHTTPRequestHandler):
     server_version = "CircleDraw/1.0"
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, directory=str(ROOT), **kwargs)
+        super().__init__(*args, directory=str(FRONTEND_ROOT), **kwargs)
 
     def do_GET(self) -> None:
         path = urlparse(self.path).path
@@ -345,6 +350,9 @@ class RouletteRequestHandler(SimpleHTTPRequestHandler):
                 self._send_json(200, {"state": SESSION.state()})
             elif path == "/api/reset":
                 SESSION.reset()
+                self._send_json(200, {"state": SESSION.state()})
+            elif path == "/api/new-round":
+                SESSION.start_new_round()
                 self._send_json(200, {"state": SESSION.state()})
             else:
                 self._send_json(404, {"error": "API endpoint not found."})

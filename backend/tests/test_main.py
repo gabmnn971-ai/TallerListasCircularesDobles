@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from main import ParticipantCircle, RouletteSession
+from backend.main import ParticipantCircle, RouletteSession
 
 
 class ParticipantCircleTests(unittest.TestCase):
@@ -66,6 +66,18 @@ class RouletteSessionTests(unittest.TestCase):
         self.assertEqual(self.session.state()["current_id"], self.session.circle.head.participant_id)
         self.assertEqual(self.session.state()["round_count"], 0)
         self.assertEqual(self.session.state()["history"][0]["title"], "Checkpoint restored")
+
+    def test_new_round_keeps_available_participants_and_reopens_finished_draw(self):
+        with patch.object(self.session.rng, "randint", return_value=1):
+            self.session.spin("winner", "clockwise")
+
+        self.session.start_new_round()
+        state = self.session.state()
+
+        self.assertEqual([person["name"] for person in state["participants"]], ["Ada", "Grace", "Linus"])
+        self.assertEqual(state["status"], "ready")
+        self.assertEqual(state["round_count"], 0)
+        self.assertTrue(state["participants"][0]["is_current"])
 
     def test_invalid_and_duplicate_participants_are_rejected(self):
         with self.assertRaisesRegex(ValueError, "already in the circle"):

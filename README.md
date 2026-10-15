@@ -10,16 +10,28 @@ restore named checkpoints during the current server session.
 Requires Python 3.10 or newer. No third-party packages are needed.
 
 ```powershell
-python main.py
+python -m backend.main
 ```
 
 Open [http://127.0.0.1:8000](http://127.0.0.1:8000). To choose a different port,
-run `python main.py --port 8080`.
+run `python -m backend.main --port 8080`.
+
+## Project layout
+
+```text
+backend/
+  main.py          Python circular-list model and HTTP API
+  tests/           Backend unit tests
+frontend/
+  index.html       Application page
+  css/styles.css   Responsive theme and roulette animations
+  js/app.js        Browser interactions and draw animation
+```
 
 ## Test
 
 ```powershell
-python -m unittest discover -s tests -v
+python -m unittest discover -s backend/tests -v
 ```
 
 The participant ring is circular in both directions. Each draw chooses a random

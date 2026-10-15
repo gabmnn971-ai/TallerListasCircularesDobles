@@ -15,8 +15,8 @@
       href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css" />
-    <script src="/app.js" defer></script>
+    <link rel="stylesheet" href="/css/styles.css" />
+    <script src="/js/app.js" defer></script>
   </head>
   <body>
     <div class="app-shell">
@@ -125,11 +125,18 @@
               </svg>
               <div class="stage-orbit orbit-one"></div>
               <div class="stage-orbit orbit-two"></div>
-              <div class="centerpiece" id="centerpiece">
+              <div class="centerpiece" id="centerpiece" aria-label="Animated roulette wheel">
                 <div class="center-orbit"></div>
+                <div class="roulette-needle" aria-hidden="true"><span></span></div>
+                <div class="roulette-wheel" id="roulette-wheel" aria-hidden="true">
+                  <span class="roulette-slot"></span><span class="roulette-slot"></span>
+                  <span class="roulette-slot"></span><span class="roulette-slot"></span>
+                  <span class="roulette-slot"></span><span class="roulette-slot"></span>
+                  <span class="roulette-slot"></span><span class="roulette-slot"></span>
+                  <div class="roulette-hub"><span class="hub-star">✦</span></div>
+                </div>
                 <div class="center-spark spark-one"></div>
                 <div class="center-spark spark-two"></div>
-                <div class="center-logo"><span class="center-symbol">C</span></div>
                 <div class="center-label" id="center-label">THE CIRCLE</div>
                 <div class="center-subtitle" id="center-subtitle">IS READY</div>
               </div>
